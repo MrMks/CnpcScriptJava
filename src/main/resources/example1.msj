@@ -1,0 +1,40 @@
+@@com.github.mrmks.mc.script.TestInit::Runnable
+java.lang.Runnable
+java.util.LinkedList
+noppes.npcs.api.event.*
+@@~
+// the @@[package.]name[,modifiers] must at the first line
+// then before '@@~' in a separate line, you can write some classes to import;
+// also the static import;
+// like:
+// noppes.npcs.api.event.*;
+// static noppes.npcs.api.constants.EntityType.*;
+// we direct copy your contents so care for the ';'
+
+// we import npcs.api.event.* for you by default;
+
+// notice that other contents are not allowed in head, include the comment;
+
+// after the '@@~' line, we will copy contents to the target class directly.
+// use standard java language format below;
+// we define the sji, sjo, sje for you, which is Reader and Writer(both of sjo and sje);
+// and we define print(Object) method for you;
+
+public TestInit() {
+    print(1);
+}
+
+public void run() {
+    print("Hello World");
+    LinkedList<String> list = new LinkedList<>();
+    list.add("a");
+    print(list.get(0));
+}
+
+public void init() {
+    print("Hello Init");
+}
+
+public void init(String str) {
+    print(str == null ? "null" : str);
+}

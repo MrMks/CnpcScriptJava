@@ -1,0 +1,6 @@
+#!=:String
+int i = 7;
+byte[] ary = new byte[i];
+for (int j = 0;j < i; ++j) ary[j] = '*';
+return new String(ary);
+#!

@@ -1,0 +1,5 @@
+#!=:String
+int i = 7;
+byte[] bytes = new byte[i];
+java.util.Arrays.fill(bytes, (byte)'*');
+return new String(bytes);
