@@ -57,9 +57,13 @@ public class ScriptJavaEngine implements ScriptEngine, Compilable, Invocable {
     }
 
     protected Class<?> compile0(String full, String clazz, String body) throws ScriptException {
-        ClassLoader loader = Thread.currentThread().getContextClassLoader();
-
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+
+        if (compiler == null) {
+            throw new ScriptException("Compiler not found, may running in jre. Please use jdk instead of jre.");
+        }
+
+        ClassLoader loader = Thread.currentThread().getContextClassLoader();
         DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
         StandardJavaFileManager stdManager = compiler.getStandardFileManager(diagnostics, null, null);
         ScriptJavaFileManager manager = new ScriptJavaFileManager(stdManager, loader);
