@@ -1,15 +1,13 @@
 package com.github.mrmks.mc.cscriptjava.engine;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
-
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.HashMap;
-import java.util.Objects;
 
 public class SharedClassPool {
 
@@ -40,14 +38,7 @@ public class SharedClassPool {
     static void put(Class<?> klass) {
         String name = klass.getCanonicalName();
         if (saved.containsKey(name)) {
-            String rn = name.replace('.', '/');
-            File file = new File(path, rn.concat(".class"));
-            try {
-                byte[] bytes = IOUtils.toByteArray(Objects.requireNonNull(klass.getClassLoader().getResourceAsStream(name)));
-                FileUtils.writeByteArrayToFile(file, bytes);
-            } catch (IOException ignored) {
-            }
-            saved.put(name, klass);
+            (writeTo(path, klass, name) ? saved : cache).put(name, klass);
         } else {
             cache.put(name, klass);
         }
@@ -66,14 +57,7 @@ public class SharedClassPool {
 
     static Class<?> callFromLoader(String name) {
         Class<?> klass = cache.get(name);
-        if (klass != null) {
-            String rn = name.replace('.', '/');
-            File file = new File(path, rn.concat(".class"));
-            try {
-                byte[] bytes = IOUtils.toByteArray(Objects.requireNonNull(klass.getClassLoader().getResourceAsStream(name)));
-                FileUtils.writeByteArrayToFile(file, bytes);
-            } catch (IOException ignored) {
-            }
+        if (klass != null && writeTo(path, klass, name)) {
             saved.put(name, klass);
             cache.remove(name);
         } else {
@@ -87,6 +71,39 @@ public class SharedClassPool {
             }
         }
         return klass;
+    }
+
+    private static int errCount = 0;
+    private static boolean writeTo(File file, Class<?> klass, String name) {
+        ClassLoader loader = klass.getClassLoader();
+        if (loader instanceof ScriptJavaClassLoader) {
+            byte[] bytes = ((ScriptJavaClassLoader) loader).classBytes.get(name);
+            if (bytes != null) {
+                try {
+                    file = new File(file, name.replace('.', '/').concat(".class"));
+                    if (!file.exists()) {
+                        File parent = file.getParentFile();
+                        if (parent != null) {
+                            if (!parent.isDirectory() && !parent.mkdirs()) {
+                                throw new IOException("Directory '" + parent + "' could not be created");
+                            }
+                        }
+                    } else if (!file.canWrite()) throw new IOException("File '" + file + "' cannot be written to");
+
+                    OutputStream out = new FileOutputStream(file);
+                    out.write(bytes);
+                    out.flush();
+                    out.close();
+                    return true;
+                } catch (IOException e) {
+                    errCount++;
+                    if (errCount < 32 || (errCount & ((errCount >>> 4) - 1)) == 0) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     static boolean isClassValid(Class<?> klass) {

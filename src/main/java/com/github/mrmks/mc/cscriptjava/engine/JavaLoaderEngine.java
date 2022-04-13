@@ -5,6 +5,8 @@ import java.io.*;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.Iterator;
 import java.util.LinkedList;
 
 public class JavaLoaderEngine extends AbstractScriptEngine implements Invocable {
@@ -16,36 +18,56 @@ public class JavaLoaderEngine extends AbstractScriptEngine implements Invocable 
         this.factory = factory;
     }
 
-    private static String[] parseParams(String str) {
-        LinkedList<String> list = new LinkedList<>();
-        boolean lastTr = false;
-        StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < str.length(); ++i) {
-            char c = str.charAt(i);
-            if (lastTr) builder.append(c);
-            else if (c == ',') {
-                list.add(builder.toString());
-                builder = new StringBuilder();
-            } else if (!(lastTr = c == '\\')) {
-                builder.append(c);
-            }
-        }
-        list.add(builder.toString());
-        return list.toArray(new String[0]);
-    }
-
     private static Object[] compile0(Reader reader, PrintWriter pw) throws ScriptException {
         BufferedReader br = reader instanceof BufferedReader ? (BufferedReader) reader : new BufferedReader(reader);
 
         String[] lines = br.lines().toArray(String[]::new);
         LinkedList<Object> list = new LinkedList<>();
         LinkedList<String> usageList = new LinkedList<>();
-        for (String line : lines) {
-            if (!line.isEmpty()) line = line.trim();
-            if (!line.isEmpty() && !line.startsWith("//")) {
-                int p = line.indexOf(':');
-                String klass = p < 0 ? line : line.substring(0, p);
-                String params = p < 0 ? null : line.substring(p + 1);
+        LinkedList<String> crashMsg = new LinkedList<>();
+
+        Iterator<String> it = Arrays.stream(lines).iterator();
+        String tmp;
+        while (it.hasNext()) {
+            tmp = it.next();
+            if (!tmp.isEmpty() && !(tmp = tmp.trim()).isEmpty() && !tmp.startsWith("//")) {
+                String klass;
+                String[] params;
+                int p = tmp.indexOf('(');
+                if (p < 0) {
+                    klass = tmp;
+                    params = null;
+                } else {
+                    klass = tmp.substring(0, p);
+                    tmp = tmp.substring(p + 1).trim();
+                    LinkedList<String> pList = new LinkedList<>();
+                    StringBuilder sb = new StringBuilder();
+                    label:
+                    while (true) {
+                        if (!tmp.isEmpty()) {
+                            boolean tr = false;
+                            for (int i = 0; i < tmp.length(); ++i) {
+                                char c = tmp.charAt(i);
+                                if (tr) {
+                                    sb.append(c == 'n' ? '\n' : c);
+                                    tr = false;
+                                } else if (c == ',') {
+                                    pList.add(sb.toString());
+                                    sb = new StringBuilder();
+                                } else if (c == ')') {
+                                    pList.add(sb.toString());
+                                    break label;
+                                } else if (!(tr = c == '\\')) sb.append(c);
+                            }
+                            if (sb.length() != 0) sb.append('\n');
+                        } else {
+                            sb.append('\n');
+                        }
+                        if (it.hasNext()) tmp = it.next();
+                        else throw new ScriptException("Can't parse params for class: " + klass);
+                    }
+                    params = pList.toArray(new String[0]);
+                }
                 Class<?> clazz = SharedClassPool.callFromLoader(klass);
                 if (clazz != null) {
                     Object ins = null;
@@ -55,31 +77,41 @@ public class JavaLoaderEngine extends AbstractScriptEngine implements Invocable 
                     if (ins != null) {
                         list.add(ins);
                         if (params != null) {
-                            String[] paramAry = parseParams(params);
                             try {
                                 Method me = clazz.getMethod("setParams", String[].class);
                                 try {
                                     Method usg = clazz.getMethod("usageParams");
                                     Object re = usg.invoke(ins);
-                                    if (!(re instanceof String)) throw new ScriptException("Your usageParams() method must return String in non-null");
-                                    usageList.add(klass + ": " + re);
+                                    if (re instanceof String) usageList.add(klass + ": " + re);
+                                    else {
+                                        crashMsg.add("usageParams() return non string: " + klass);
+                                        continue;
+                                    }
                                 } catch (NoSuchMethodException e) {
-                                    throw new ScriptException("You must provide usageParams() method with setParams(String[]) and return String");
+                                    crashMsg.add("Method usageParams() not defined: " + klass);
+                                    continue;
+                                    //throw new ScriptException(klass + ": You must provide usageParams() method with setParams(String[]) and return String");
                                 } catch (InvocationTargetException | IllegalAccessException ignored) {}
-                                me.invoke(ins, (Object) paramAry);
+                                me.invoke(ins, (Object) params);
                             } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException ignored) {
+                                pw.println("setParams(String[]) doesn't defined, params will be ignored: ".concat(klass));
                             }
                         }
                     }
                 } else {
-                    throw new ScriptException("class not found: " + klass);
+                    crashMsg.add("class not found: " + klass);
                 }
             }
         }
+        if (!crashMsg.isEmpty()) {
+            throw new ScriptException(String.join("\n", crashMsg));
+        }
         if (!list.isEmpty()) {
-            pw.println("List of param usages:");
-            for (String u : usageList) pw.println(u);
-            pw.println();
+            if (!usageList.isEmpty()) {
+                pw.println("List of param usages:");
+                for (String u : usageList) pw.println(u);
+                pw.println();
+            }
             return list.toArray();
         }
         return null;
