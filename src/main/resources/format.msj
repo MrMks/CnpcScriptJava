@@ -1,6 +1,73 @@
+rule 1
+The script requires a header to work, and the header must at the first line.
+The header start with a sharp mark('#'), then depends on the next char, be behavior will different.
+
+rule 2
+If the second char is '+', the compiler will compile the script to a runnable.
+Else if it is '=', the compiler will compile it to a supplier.
+Else if it is '!', see rule 8.
+Else, the compiler will compile it to normal class.
+This defines the type of this class.
+
+If the second char doesn't exist, the compiler will compile the script to a runnable, but this is not suggested.
+
+rule 3
+Then after that, you can name the class and the package, in format of ([package.]className|?),
+if the whole package.className is empty or it is '?', the class will be name to "R", "S" or "A" - depends on the type,
+means "Runnable", "Supplier" and "Anonymous" - and append with an number.
+
+rule 4
+After the package.name, the behaviors depends on the type.
+If it is a runnable type, you should keep this place empty.
+If it is a Supplier type, you can append a ':' then give the Generic Type of the supplier, if it is empty, the generic
+type is Object.
+If it is a normal class type, you can append a ':' for extends and append another ':' for interfaces
+
+rule 5
+In next several lines, you can import some classes, in format of [//][import ][package.]name[;]
+Then you should use a '#!' mark to show the end of import.
+
+rule 6
+If the type is Runnable or Supplier, in next several lines, you can write your codes without the method definition, to
+implements the interface.
+After you finish this part, please use another '#!' mark if you want to define members in rule 7;
+
+rule 7
+In the last part, you can write your codes such as field definition and method definition like a normal java file, even
+the inner class definition.
+But be aware of that, we will compile the outer class defines for you, please do that job by your self.
+
+rule 8
+In addition, if you have no class to import and you want a simpler format, you can insert a '!' between the '#' and
+type symbol at the first line, and remove the '#!' mark mentioned in rule 5.
+
+rule 9
+Specially, you can write scripts with no header, in this situation, we will compile it to a Runnable, and also follow
+the rule 6;
+
+following those rules, there are some examples of valid header format:
+example 1:
+#foo.bar.Test:Thread:List
+java.lang.Thread
+java.util.List
+#!
+
+example 2(rule 8):
+#!+foo.bar.Run
+System.out.println(nextInt());
+#!
+private int next = 0;
+private int nextInt() {
+    return next++;
+}
+
+example 3(rule 2, 8):
 #!=:String
 int i = 7;
-byte[] ary = new byte[i];
-for (int j = 0;j < i; ++j) ary[j] = '*';
-return new String(ary);
-#!
+byte[] bytes = new byte[i];
+for (int j = 0; j < i; ++j) byte[j] = '*';
+return new String(bytes);
+
+example 4(rule 9):
+int i = 7;
+for (int j = 0; j < i; ++j) System.out.println(j);
