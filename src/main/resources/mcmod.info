@@ -1,2 +1,5 @@
-modid: cnpcscriptjava
-version: 0.0.1
+[{
+    "modid": "cnpcscriptjava",
+    "name": "CnpcScriptJava",
+    "version": "0.0.1-build3"
+}]
