@@ -1,1 +1,1 @@
-A script engine basing on java, format is [here](src/main/resources/format.msj)
+A script engine basing on java, format for msj is [here](src/main/resources/format_zh.msj), and format for jl is [here](src/main/resources/format_zh.jl)

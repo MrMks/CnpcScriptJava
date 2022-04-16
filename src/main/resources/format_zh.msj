@@ -1,0 +1,69 @@
+这是一个基于java的带标记的脚本格式，我将其命名为MSJ，意为“畸形的脚本java”或“被标记的脚本java”。
+脚本的运行依赖于header信息，编译器会根据header及相关标记将脚本文件组装为可用的.class文件
+
+msj脚本的标准格式为:
+
+#(+|=|?)[[package.]name][extras]
+[//][imports ][package.]name[;]
+#!
+section A
+[#!
+section B]
+
+在无需引入时，亦可以使用缩略格式:
+#!(+|=|?)[[package.]name][extras]
+section A
+[#!
+section B]
+
+符号 '+','=','?'表示三种不同的类型，分别为Runnable, Supplier, Class;
+当使用Runnable与Supplier类型时，您需要在section A部分完成对应Interface的方法实现。
+如果您需要，还可以在section B中定义类中的其它成员。
+
+在下面的例子中将完成一个显示 "Hello World" 的Runnable类型脚本
+
+#!+foo.bar.HelloWorld
+print();
+#!
+private void print() {
+    System.out.println("Hello World");
+}
+
+下面这个例子将展示类型定义亦是可行的:
+
+#!+foo.bar.PrintInt
+System.out.println(nextInt());
+#!
+private int num = 0;
+private int nextInt() {
+    return num++;
+}
+
+对于Runnable类型，您需要保持extras部分为空，而对于Supplier类型，您可以以:Type的格式在此表现返回值的类型，例如:
+
+#!=foo.bar.HelloWorld:String
+return "Hello World";
+
+若您对于Supplier类型脚本的extras部分不做实现，我们将默认为您实现为Object
+
+如果您使用Class类型，在extras部分中，您可以以:[extends][:[implements]]的格式在此定义此类的继承和实现关系。
+如果此类实现Runnable或Supplier，我们将自动调用其实现方法，特殊的，如果两个接口同时被实现，我们将仅调用其Runnable接口的实现方法。
+对于Class类型, 您需要保持section B为空。
+
+此外，有一种极为特殊的格式，您可以在不书写header信息的情况下书写代码，在此情形下，我们将对其按无导入的Runnable类型处理您的代码。
+例如:
+print();
+#!
+private void print() {
+    System.out.println("Hello World");
+}
+
+为了方便像特定流中写入输出内容，我们将总是为您的类添加一个static方法，其定义如下:
+static java.io.Writer sjo;
+static void print(Object obj) {
+    try {
+        sjo.write(obj.toString());
+        sjo.write("\n");
+        sjo.flush();
+    } catch(java.io.IOException e) {}
+}

@@ -44,8 +44,18 @@ public class ScriptJavaEngine implements ScriptEngine, Compilable, Invocable {
             throw new ScriptException("Unable to compile java file");
         }
         this.klass = clazz;
-        if (!re[1].equals(re[0].substring(0, 1).concat(Integer.toString(id)))) {
-            SharedClassPool.put(clazz);
+        if (re[0].indexOf('.') > 0) SharedClassPool.put(clazz);
+        else {
+            String tmp = re[0].substring(1);
+            try {
+                Integer.parseInt(tmp);
+                char c = tmp.charAt(0);
+                if (c != 'R' && c != 'S' && c != 'A') {
+                    SharedClassPool.put(clazz);
+                }
+            } catch (NumberFormatException e) {
+                SharedClassPool.put(clazz);
+            }
         }
         try {
             insertIO(klass);
@@ -96,7 +106,7 @@ public class ScriptJavaEngine implements ScriptEngine, Compilable, Invocable {
         }
     }
 
-    private static final char headStop = '!', headRun = '+', headSupplier = '=', headAno = '?';
+    private static final char headStop = '!', headRun = '+', headSupplier = '=', headClass = '?';
     private static final String preHead = "#", preEnd = preHead + headStop;
     protected static String[] construct(BufferedReader br, int id) throws ScriptException {
         try {
@@ -107,21 +117,39 @@ public class ScriptJavaEngine implements ScriptEngine, Compilable, Invocable {
             StringBuilder sb = new StringBuilder();
 
             String full, clazz;
-            if (line.startsWith(preHead)) {
+            if ((line = line.trim()).startsWith(preHead)) {
                 String pack, ext, impl, token = "Object";
-                boolean hasImp = line.length() <= preHead.length() || line.charAt(preEnd.length() - 1) != headStop;
+
+                if (line.length() <= preHead.length()) throw new ScriptException("Illegal header format: Too short the first line is");
+
+                boolean hasImp = line.charAt(preEnd.length() - 1) != headStop;
                 line = line.substring(hasImp ? preHead.length() : preEnd.length()).trim();
-                boolean isRun = line.isEmpty() || line.charAt(0) == headRun;
-                boolean isSupplier = !line.isEmpty() && line.charAt(0) == headSupplier;
-                isClass = !isRun && !isSupplier;
+
+                if (line.isEmpty()) throw new ScriptException("Illegal header format: No type symbol provided");
+
+                boolean isRun = false;
+                boolean isSupplier = false;
+                {
+                    char c = line.charAt(0);
+                    if (c == headClass) isClass = true;
+                    else if (c == headRun) isRun = true;
+                    else if (c == headSupplier) isSupplier = true;
+                    else throw new ScriptException("Illegal header format: Unrecognized type symbol");
+                }
+                line = line.substring(1);
                 if (isClass) {
                     int p = line.indexOf(':'), p2 = line.lastIndexOf(':');
-                    full = p < 0 ? line : line.substring(0, p);
                     ext = p < 0 ? null : (p == p2 ? line.substring(p + 1) : line.substring(p + 1, p2)).trim();
                     impl = p2 < 0 || p == p2 ? null : line.substring(p2 + 1).trim();
-                    clazz = (p = full.lastIndexOf('.')) < 0 ? full : full.substring(p + 1);
-                    pack = p < 0 ? null : full.substring(0, p).trim();
-                    if (clazz.charAt(0) == headAno) clazz = full = "A" + id;
+
+                    full = p < 0 ? line : line.substring(0, p).trim();
+                    if (full.isEmpty()) {
+                        full = clazz = "A" + id;
+                        pack = null;
+                    } else {
+                        clazz = (p = full.lastIndexOf('.')) < 0 ? full : full.substring(p + 1);
+                        pack = p < 0 ? null : full.substring(0, p).trim();
+                    }
                 } else {
                     if (isSupplier) {
                         int p = line.indexOf(':');

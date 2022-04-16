@@ -8,6 +8,7 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.function.Supplier;
 
 public class JavaLoaderEngine extends AbstractScriptEngine implements Invocable {
 
@@ -154,6 +155,11 @@ public class JavaLoaderEngine extends AbstractScriptEngine implements Invocable 
             ins = objs;
             for (Object obj : objs) {
                 insertIO(obj, context);
+                if (obj instanceof Runnable) {
+                    ((Runnable) obj).run();
+                } else if (obj instanceof Supplier<?>) {
+                    ((Supplier<?>)obj).get();
+                }
             }
         }
         return null;

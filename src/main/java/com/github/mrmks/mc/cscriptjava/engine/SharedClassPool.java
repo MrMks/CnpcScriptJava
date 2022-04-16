@@ -22,9 +22,9 @@ public class SharedClassPool {
                 //url = new URL("file:" + pa.getAbsolutePath() + "/");
                 url = new URL(pa.toURI().toURL(), "./");
             } catch (MalformedURLException e) {
+                // this should never happen, so we throw it as a runtimeException;
+                throw new RuntimeException(e);
             }
-            // null check;
-            url.getClass();
         }
     }
 
