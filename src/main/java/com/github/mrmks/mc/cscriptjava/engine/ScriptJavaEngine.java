@@ -10,6 +10,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Collections;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class ScriptJavaEngine implements ScriptEngine, Compilable, Invocable {
@@ -129,15 +131,40 @@ public class ScriptJavaEngine implements ScriptEngine, Compilable, Invocable {
 
                 boolean isRun = false;
                 boolean isSupplier = false;
+                boolean isCopy = false;
                 {
                     char c = line.charAt(0);
                     if (c == headClass) isClass = true;
                     else if (c == headRun) isRun = true;
                     else if (c == headSupplier) isSupplier = true;
+                    else if (c == headStop) isCopy = true;
                     else throw new ScriptException("Illegal header format: Unrecognized type symbol");
                 }
                 line = line.substring(1);
-                if (isClass) {
+                if (isCopy) {
+                    while ((line = br.readLine()) != null) sb.append(line).append('\n');
+                    int p = sb.lastIndexOf("}"), p2;
+                    if (p < 0) throw new ScriptException("Unrecognized format for copy: '}' is expected at the end");
+                    sb.deleteCharAt(p);
+                    attachPrint(sb);
+                    String body = sb.append('}').toString();
+                    pack = null;
+                    p = body.indexOf("package ");
+                    if (p >= 0) {
+                        p2 = body.indexOf(';', p);
+                        if (p2 < 0) throw new ScriptException("Unrecognized format for copy: ';' is excepted at the end of the package name");
+                        pack = body.substring(p + 8, p2);
+                    }
+                    Pattern pattern = Pattern.compile("public\\s+(?:final\\s)?\\s*class\\s+(\\w(?:\\w|\\d)*)");
+                    Matcher matcher = pattern.matcher(body);
+                    if (matcher.find()) {
+                        clazz = matcher.group(1);
+                    } else {
+                        throw new ScriptException("Unrecognized format for copy: Can't find the name of the non-static public class");
+                    }
+                    return new String[]{pack == null ? clazz : pack.concat(".").concat(clazz), clazz, body};
+                }
+                else if (isClass) {
                     int p = line.indexOf(':'), p2 = line.lastIndexOf(':');
                     ext = p < 0 ? null : (p == p2 ? line.substring(p + 1) : line.substring(p + 1, p2)).trim();
                     impl = p2 < 0 || p == p2 ? null : line.substring(p2 + 1).trim();

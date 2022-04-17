@@ -20,7 +20,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-@Mod(modid = "cnpcscriptjava", name = "CnpcScriptJava", version = "0.0.1", acceptableRemoteVersions = "*")
+//@Mod(modid = "cnpcscriptjava", name = "CnpcScriptJava", version = "0.0.1", acceptableRemoteVersions = "*")
 public class CnpcScriptJava {
 
     @Mod.EventHandler
@@ -65,7 +65,7 @@ public class CnpcScriptJava {
                             if (args.length < 2 || args[1].isEmpty()) sender.sendMessage(new TextComponentString("You should input a class name"));
                             else {
                                 String cn = args[1];
-                                String msg = SharedClassPool.remove(args[1]) ? "Success to remove class \"" + cn + "\"" : "Class \"" + cn + "\" doesn't exist.";
+                                String msg = SharedClassPool.remove(args[1]) ? "Success to remove class \"" + cn + "\"" : "Class \"" + cn + "\" doesn't exist or failed to delete.";
                                 sender.sendMessage(new TextComponentString(msg));
                             }
                         } else if (sub.equalsIgnoreCase("test")) {

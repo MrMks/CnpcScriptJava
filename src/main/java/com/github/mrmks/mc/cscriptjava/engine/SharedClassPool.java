@@ -7,6 +7,7 @@ import java.io.OutputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.Files;
 import java.util.HashMap;
 
 public class SharedClassPool {
@@ -47,12 +48,25 @@ public class SharedClassPool {
     public static boolean remove(String name) {
         boolean flag;
         flag = cache.remove(name) != null;
-        flag = saved.remove(name) != null || flag;
+        flag = removeSaved(name) || flag;
         return flag;
     }
 
     public static boolean contain(String name) {
         return cache.containsKey(name) || saved.containsKey(name);
+    }
+
+    private static boolean removeSaved(String name) {
+        boolean f = saved.remove(name) != null;
+        if (f) {
+            try {
+                f = Files.deleteIfExists(new File(path, name.replace('.', '/')).toPath());
+            } catch (IOException e) {
+                f = false;
+                e.printStackTrace();
+            }
+        }
+        return f;
     }
 
     static Class<?> callFromLoader(String name) {
