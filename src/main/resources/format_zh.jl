@@ -28,9 +28,9 @@ public String usageParams() {
 }
 
 在jl中，您可以如此设置参数:
-foo.bar.Test(Good Morning)
+foo.bar.Test("Good Morning")
 
-参数间使用 ',' 隔开，使用 '\,'表现 ',' 本身，同时亦可使用 '\n' 表示换行符
+参数间使用 ',' 隔开，使用 '\"'表现 '"' 本身，同时亦可使用 '\n' 表示换行符
 
 此外，有一些特殊规则:
 不提供包名，同时以 'R', 'S' 或 'A' 做开头并以数字结尾的类名的类无法被jl调用
