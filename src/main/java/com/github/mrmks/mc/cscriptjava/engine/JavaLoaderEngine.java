@@ -5,7 +5,6 @@ import java.io.*;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.function.Supplier;
@@ -19,15 +18,71 @@ public class JavaLoaderEngine extends AbstractScriptEngine implements Invocable 
         this.factory = factory;
     }
 
+    public static String[] parseParams(String str, Iterator<String> it) throws ScriptException {
+        LinkedList<String> list = new LinkedList<>();
+        int i = 0;
+        boolean fLoop = true;
+        do {
+            for (; i < str.length(); ++i) {
+                char c = str.charAt(i);
+                if (c != ' ') {
+                    if (c == '"') {
+                        boolean tr = false;
+                        StringBuilder sb = new StringBuilder();
+                        for (++i; i < str.length(); ++i) {
+                            c = str.charAt(i);
+                            if (tr) {
+                                sb.append(c == 'n' ? '\n' : c);
+                                tr = false;
+                            } else if (c == '"') {
+                                list.add(sb.toString());
+                                break;
+                            } else if (!(tr = c == '\\')) {
+                                sb.append(c);
+                            }
+                        }
+                        if (i == str.length())
+                            throw new ScriptException("'\"' is expected but found the end of the line");
+                    } else if (c == ')' && fLoop) {
+                        return list.toArray(new String[0]);
+                    } else throw new ScriptException("'\"' or ')' is expected but found '" + c + "'");
+                    fLoop = false;
+                    boolean fComma = false;
+                    do {
+                        for (++i; i < str.length(); ++i) {
+                            c = str.charAt(i);
+                            if (c != ' ') {
+                                if (c == ',') {
+                                    fComma = true;
+                                    break;
+                                } else if (c == ')') return list.toArray(new String[0]);
+                                else throw new ScriptException("',' or ')' expected, but found '" + c + "'");
+                            }
+                        }
+                        if (!fComma) {
+                            if (it.hasNext()) {
+                                str = it.next();
+                                i = -1;
+                            } else throw new ScriptException("Found eof while parsing the params");
+                        }
+                    } while (!fComma);
+                }
+            }
+            if (it.hasNext()) {
+                str = it.next();
+                i = 0;
+            } else throw new ScriptException("Found eof while parsing the params");
+        } while (true);
+    }
+
     private static Object[] compile0(Reader reader, PrintWriter pw) throws ScriptException {
         BufferedReader br = reader instanceof BufferedReader ? (BufferedReader) reader : new BufferedReader(reader);
 
-        String[] lines = br.lines().toArray(String[]::new);
         LinkedList<Object> list = new LinkedList<>();
         LinkedList<String> usageList = new LinkedList<>();
         LinkedList<String> crashMsg = new LinkedList<>();
 
-        Iterator<String> it = Arrays.stream(lines).iterator();
+        Iterator<String> it = br.lines().iterator();
         String tmp;
         while (it.hasNext()) {
             tmp = it.next();
@@ -41,33 +96,7 @@ public class JavaLoaderEngine extends AbstractScriptEngine implements Invocable 
                 } else {
                     klass = tmp.substring(0, p);
                     tmp = tmp.substring(p + 1).trim();
-                    LinkedList<String> pList = new LinkedList<>();
-                    StringBuilder sb = new StringBuilder();
-                    label:
-                    while (true) {
-                        if (!tmp.isEmpty()) {
-                            boolean tr = false;
-                            for (int i = 0; i < tmp.length(); ++i) {
-                                char c = tmp.charAt(i);
-                                if (tr) {
-                                    sb.append(c == 'n' ? '\n' : c);
-                                    tr = false;
-                                } else if (c == ',') {
-                                    pList.add(sb.toString());
-                                    sb = new StringBuilder();
-                                } else if (c == ')') {
-                                    pList.add(sb.toString());
-                                    break label;
-                                } else if (!(tr = c == '\\')) sb.append(c);
-                            }
-                            if (sb.length() != 0) sb.append('\n');
-                        } else {
-                            sb.append('\n');
-                        }
-                        if (it.hasNext()) tmp = it.next();
-                        else throw new ScriptException("Can't parse params for class: " + klass);
-                    }
-                    params = pList.toArray(new String[0]);
+                    params = parseParams(tmp, it);
                 }
                 Class<?> clazz = SharedClassPool.callFromLoader(klass);
                 if (clazz != null) {
@@ -176,7 +205,7 @@ public class JavaLoaderEngine extends AbstractScriptEngine implements Invocable 
     }
 
     @Override
-    public Object invokeMethod(Object thiz, String name, Object... args) throws ScriptException, NoSuchMethodException {
+    public Object invokeMethod(Object thiz, String name, Object... args) {
         return null;
     }
 

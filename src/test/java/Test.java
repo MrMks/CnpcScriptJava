@@ -1,12 +1,13 @@
+import com.github.mrmks.mc.cscriptjava.engine.JavaLoaderEngine;
 import com.github.mrmks.mc.cscriptjava.engine.ScriptJavaEngine;
 import com.github.mrmks.mc.cscriptjava.engine.ScriptJavaEngineFactory;
 import org.junit.Assert;
 
 import javax.script.ScriptEngine;
 import javax.script.ScriptException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.util.Arrays;
+import java.util.Iterator;
 
 public class Test {
 
@@ -26,5 +27,18 @@ public class Test {
 //        System.out.println(System.currentTimeMillis() - stamp);
 
         //((Invocable) engine).invokeFunction("init", "a");
+    }
+
+    @org.junit.Test
+    public void testJLParams() throws ScriptException {
+
+        InputStream stream = getClass().getResourceAsStream("params.txt");
+        BufferedReader br = new BufferedReader(new InputStreamReader(stream));
+        Iterator<String> it = br.lines().iterator();
+
+        it.hasNext();
+        String tmp = it.next();
+
+        String[] strings = JavaLoaderEngine.parseParams(tmp, it);
     }
 }
