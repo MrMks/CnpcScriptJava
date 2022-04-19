@@ -20,7 +20,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-//@Mod(modid = "cnpcscriptjava", name = "CnpcScriptJava", version = "0.0.1", acceptableRemoteVersions = "*")
+@Mod(modid = "cnpcscriptjava", name = "CnpcScriptJava", version = "0.0.1", acceptableRemoteVersions = "*")
 public class CnpcScriptJava {
 
     @Mod.EventHandler

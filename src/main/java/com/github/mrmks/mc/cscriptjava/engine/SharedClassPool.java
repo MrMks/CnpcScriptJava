@@ -16,6 +16,15 @@ public class SharedClassPool {
     private static File path = null;
     private static URL url;
 
+    static {
+        try {
+            url = new URL("./");
+        } catch (MalformedURLException e) {
+            // this should never happen
+            e.printStackTrace();
+        }
+    }
+
     public static void init(File pa) {
         if (path == null && pa != null) {
             path = pa;
